@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-ServletApplication<servlet>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "hello.servlet.ServletApplication",
+            "projectName": "servlet",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}
