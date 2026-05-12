@@ -1,0 +1,27 @@
+package com.piumteo.server.domain.user.exception;
+
+import com.piumteo.server.global.exception.ErrorCode;
+import com.piumteo.server.global.response.ErrorResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+@Slf4j
+@Order(Ordered.HIGHEST_PRECEDENCE)
+@RestControllerAdvice
+public class UserExceptionHandler {
+
+    @ExceptionHandler(UserException.class)
+    public ResponseEntity<ErrorResponse> handleUserException(
+            UserException exception
+    ) {
+        ErrorCode errorCode = exception.getErrorCode();
+
+        return ResponseEntity
+                .status(errorCode.getHttpStatus())
+                .body(ErrorResponse.of(errorCode, exception.getMessage()));
+    }
+}
