@@ -1,19 +1,22 @@
 package com.piumteo.server.domain.comment.service;
 
+import com.piumteo.server.domain.comment.dto.CommentCursorResponse;
 import com.piumteo.server.domain.comment.dto.CommentResponse;
 import com.piumteo.server.domain.comment.dto.CreateCommentResponse;
 import com.piumteo.server.domain.comment.dto.CreateGuestCommentRequest;
 import com.piumteo.server.domain.comment.dto.CreateMemberCommentRequest;
 import com.piumteo.server.domain.comment.dto.DeleteGuestCommentRequest;
 import com.piumteo.server.domain.comment.entity.PlaceComment;
+import com.piumteo.server.domain.comment.exception.CommentCode;
+import com.piumteo.server.domain.comment.exception.CommentException;
 import com.piumteo.server.domain.comment.repository.PlaceCommentRepository;
 import com.piumteo.server.domain.place.entity.Place;
 import com.piumteo.server.domain.place.service.PlaceService;
 import com.piumteo.server.domain.user.entity.User;
 import com.piumteo.server.domain.user.service.UserService;
-import com.piumteo.server.global.exception.BusinessException;
-import com.piumteo.server.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +27,9 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class CommentService {
+
+    private static final int DEFAULT_COMMENT_PAGE_SIZE = 10;
+    private static final int MAX_COMMENT_PAGE_SIZE = 50;
 
     private final PlaceCommentRepository placeCommentRepository;
     private final PlaceService placeService;
@@ -72,16 +78,6 @@ public class CommentService {
         return CreateCommentResponse.from(savedComment.getId());
     }
 
-    public List<CommentResponse> getComments(Long placeId) {
-        placeService.getActivePlace(placeId);
-
-        return placeCommentRepository
-                .findAllByPlace_IdAndDeletedAtIsNullOrderByCreatedAtAsc(placeId)
-                .stream()
-                .map(CommentResponse::from)
-                .toList();
-    }
-
     @Transactional
     public void deleteMemberComment(
             Long commentId,
@@ -90,7 +86,7 @@ public class CommentService {
         PlaceComment comment = getActiveComment(commentId);
 
         if (!comment.isWrittenByMember(userId)) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED_COMMENT_DELETE);
+            throw new CommentException(CommentCode.UNAUTHORIZED_COMMENT_DELETE);
         }
 
         comment.delete();
@@ -104,7 +100,7 @@ public class CommentService {
         PlaceComment comment = getActiveComment(commentId);
 
         if (!comment.isGuestComment()) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED_COMMENT_DELETE);
+            throw new CommentException(CommentCode.UNAUTHORIZED_COMMENT_DELETE);
         }
 
         boolean passwordMatches = passwordEncoder.matches(
@@ -113,14 +109,82 @@ public class CommentService {
         );
 
         if (!passwordMatches) {
-            throw new BusinessException(ErrorCode.INVALID_GUEST_PASSWORD);
+            throw new CommentException(CommentCode.INVALID_GUEST_PASSWORD);
         }
 
         comment.delete();
     }
 
+    public CommentCursorResponse getComments(
+            Long placeId,
+            Long cursorId,
+            Integer size,
+            Long currentUserId
+    ) {
+        placeService.getActivePlace(placeId);
+
+        int requestSize = normalizeSize(size);
+        Pageable pageable = PageRequest.of(0, requestSize + 1);
+
+        List<PlaceComment> fetchedComments = findCommentsByCursor(
+                placeId,
+                cursorId,
+                pageable
+        );
+
+        boolean hasNext = fetchedComments.size() > requestSize;
+
+        List<PlaceComment> comments = hasNext
+                ? fetchedComments.subList(0, requestSize)
+                : fetchedComments;
+
+        Long nextCursor = hasNext && !comments.isEmpty()
+                ? comments.get(comments.size() - 1).getId()
+                : null;
+
+        List<CommentResponse> responses = comments.stream()
+                .map(comment -> CommentResponse.from(
+                        comment,
+                        comment.isWrittenByMember(currentUserId)
+                ))
+                .toList();
+
+        return new CommentCursorResponse(
+                responses,
+                nextCursor,
+                hasNext
+        );
+    }
+
+    private List<PlaceComment> findCommentsByCursor(
+            Long placeId,
+            Long cursorId,
+            Pageable pageable
+    ) {
+        if (cursorId == null) {
+            return placeCommentRepository.findByPlace_IdAndDeletedAtIsNullOrderByIdDesc(
+                    placeId,
+                    pageable
+            );
+        }
+
+        return placeCommentRepository.findByPlace_IdAndDeletedAtIsNullAndIdLessThanOrderByIdDesc(
+                placeId,
+                cursorId,
+                pageable
+        );
+    }
+
+    private int normalizeSize(Integer size) {
+        if (size == null || size < 1) {
+            return DEFAULT_COMMENT_PAGE_SIZE;
+        }
+
+        return Math.min(size, MAX_COMMENT_PAGE_SIZE);
+    }
+
     private PlaceComment getActiveComment(Long commentId) {
         return placeCommentRepository.findByIdAndDeletedAtIsNull(commentId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
+                .orElseThrow(() -> new CommentException(CommentCode.COMMENT_NOT_FOUND));
     }
 }
