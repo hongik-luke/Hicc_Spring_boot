@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.OffsetDateTime;
+import java.util.Objects;
 
 @Getter
 @Entity
@@ -32,6 +33,9 @@ public class PlaceComment extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_user_id")
     private User member;
+
+    @Column(name = "member_user_id", insertable = false, updatable = false)
+    private Long memberUserId;
 
     @Column(name = "display_nickname", nullable = false, length = 50)
     private String displayNickname;
@@ -86,7 +90,9 @@ public class PlaceComment extends BaseEntity {
     }
 
     public boolean isWrittenByMember(Long userId) {
-        return this.member != null && this.member.getId().equals(userId);
+        return this.authorType == CommentAuthorType.MEMBER
+                && userId != null
+                && Objects.equals(this.memberUserId, userId);
     }
 
     public boolean isGuestComment() {
