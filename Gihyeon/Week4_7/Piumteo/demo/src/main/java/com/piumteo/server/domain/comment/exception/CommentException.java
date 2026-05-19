@@ -4,11 +4,14 @@ import com.piumteo.server.global.exception.BusinessException;
 
 public class CommentException extends BusinessException {
 
-    public CommentException(CommentErrorCode errorCode) {
-        super(errorCode);
+    public CommentException(CommentCode commentCode) {
+        super(commentCode);
     }
 
-    public CommentException(CommentErrorCode errorCode, String message) {
-        super(errorCode, message);
+    public CommentException(
+            CommentCode commentCode,
+            String message
+    ) {
+        super(commentCode, message);
     }
 }
