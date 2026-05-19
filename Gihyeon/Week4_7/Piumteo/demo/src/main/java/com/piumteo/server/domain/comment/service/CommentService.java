@@ -1,11 +1,13 @@
 package com.piumteo.server.domain.comment.service;
 
 import com.piumteo.server.domain.comment.dto.CommentCursorResponse;
+import com.piumteo.server.domain.comment.dto.CommentMutationResponse;
 import com.piumteo.server.domain.comment.dto.CommentResponse;
-import com.piumteo.server.domain.comment.dto.CreateCommentResponse;
 import com.piumteo.server.domain.comment.dto.CreateGuestCommentRequest;
 import com.piumteo.server.domain.comment.dto.CreateMemberCommentRequest;
 import com.piumteo.server.domain.comment.dto.DeleteGuestCommentRequest;
+import com.piumteo.server.domain.comment.dto.UpdateGuestCommentRequest;
+import com.piumteo.server.domain.comment.dto.UpdateMemberCommentRequest;
 import com.piumteo.server.domain.comment.entity.PlaceComment;
 import com.piumteo.server.domain.comment.exception.CommentCode;
 import com.piumteo.server.domain.comment.exception.CommentException;
@@ -37,11 +39,12 @@ public class CommentService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public CreateCommentResponse createMemberComment(
+    public CommentMutationResponse createMemberComment(
             Long placeId,
             Long userId,
             CreateMemberCommentRequest request
     ) {
+        // TODO 인증 구현 후 Controller의 @AuthenticationPrincipal에서 userId를 꺼내 전달
         Place place = placeService.getActivePlace(placeId);
         User user = userService.getActiveUser(userId);
 
@@ -53,12 +56,11 @@ public class CommentService {
         );
 
         PlaceComment savedComment = placeCommentRepository.save(comment);
-
-        return CreateCommentResponse.from(savedComment.getId());
+        return CommentMutationResponse.from(savedComment);
     }
 
     @Transactional
-    public CreateCommentResponse createGuestComment(
+    public CommentMutationResponse createGuestComment(
             Long placeId,
             CreateGuestCommentRequest request
     ) {
@@ -74,19 +76,58 @@ public class CommentService {
         );
 
         PlaceComment savedComment = placeCommentRepository.save(comment);
+        return CommentMutationResponse.from(savedComment);
+    }
 
-        return CreateCommentResponse.from(savedComment.getId());
+    @Transactional
+    public CommentMutationResponse updateMemberComment(
+            Long placeId,
+            Long commentId,
+            Long userId,
+            UpdateMemberCommentRequest request
+    ) {
+        // TODO 인증 구현 후 Controller의 @AuthenticationPrincipal에서 userId를 꺼내 전달
+        PlaceComment comment = getActiveCommentInPlace(placeId, commentId);
+
+        if (!comment.isWrittenByMember(userId)) {
+            throw new CommentException(CommentCode.COMMENT_UPDATE_FORBIDDEN);
+        }
+
+        comment.updateContent(request.content());
+
+        return CommentMutationResponse.from(comment);
+    }
+
+    @Transactional
+    public CommentMutationResponse updateGuestComment(
+            Long placeId,
+            Long commentId,
+            UpdateGuestCommentRequest request
+    ) {
+        PlaceComment comment = getActiveCommentInPlace(placeId, commentId);
+
+        if (!comment.isGuestComment()) {
+            throw new CommentException(CommentCode.COMMENT_UPDATE_FORBIDDEN);
+        }
+
+        validateGuestPassword(comment, request.guestPassword());
+
+        comment.updateContent(request.content());
+
+        return CommentMutationResponse.from(comment);
     }
 
     @Transactional
     public void deleteMemberComment(
+            Long placeId,
             Long commentId,
             Long userId
     ) {
-        PlaceComment comment = getActiveComment(commentId);
+        // TODO 인증 구현 후 Controller의 @AuthenticationPrincipal에서 userId를 꺼내 전달
+        PlaceComment comment = getActiveCommentInPlace(placeId, commentId);
 
         if (!comment.isWrittenByMember(userId)) {
-            throw new CommentException(CommentCode.UNAUTHORIZED_COMMENT_DELETE);
+            throw new CommentException(CommentCode.COMMENT_DELETE_FORBIDDEN);
         }
 
         comment.delete();
@@ -94,23 +135,17 @@ public class CommentService {
 
     @Transactional
     public void deleteGuestComment(
+            Long placeId,
             Long commentId,
             DeleteGuestCommentRequest request
     ) {
-        PlaceComment comment = getActiveComment(commentId);
+        PlaceComment comment = getActiveCommentInPlace(placeId, commentId);
 
         if (!comment.isGuestComment()) {
-            throw new CommentException(CommentCode.UNAUTHORIZED_COMMENT_DELETE);
+            throw new CommentException(CommentCode.COMMENT_DELETE_FORBIDDEN);
         }
 
-        boolean passwordMatches = passwordEncoder.matches(
-                request.guestPassword(),
-                comment.getGuestPasswordHash()
-        );
-
-        if (!passwordMatches) {
-            throw new CommentException(CommentCode.INVALID_GUEST_PASSWORD);
-        }
+        validateGuestPassword(comment, request.guestPassword());
 
         comment.delete();
     }
@@ -183,8 +218,30 @@ public class CommentService {
         return Math.min(size, MAX_COMMENT_PAGE_SIZE);
     }
 
-    private PlaceComment getActiveComment(Long commentId) {
-        return placeCommentRepository.findByIdAndDeletedAtIsNull(commentId)
+    private PlaceComment getActiveCommentInPlace(
+            Long placeId,
+            Long commentId
+    ) {
+        placeService.getActivePlace(placeId);
+
+        return placeCommentRepository.findByIdAndPlace_IdAndDeletedAtIsNull(
+                        commentId,
+                        placeId
+                )
                 .orElseThrow(() -> new CommentException(CommentCode.COMMENT_NOT_FOUND));
+    }
+
+    private void validateGuestPassword(
+            PlaceComment comment,
+            String rawPassword
+    ) {
+        boolean passwordMatches = passwordEncoder.matches(
+                rawPassword,
+                comment.getGuestPasswordHash()
+        );
+
+        if (!passwordMatches) {
+            throw new CommentException(CommentCode.COMMENT_PASSWORD_MISMATCH);
+        }
     }
 }

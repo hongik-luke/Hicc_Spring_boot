@@ -98,4 +98,9 @@ public class PlaceComment extends BaseEntity {
     public boolean isGuestComment() {
         return this.authorType == CommentAuthorType.GUEST;
     }
+
+    public void updateContent(String content) {
+        this.content = content;
+    }
+
 }

@@ -11,6 +11,11 @@ public interface PlaceCommentRepository extends JpaRepository<PlaceComment, Long
 
     Optional<PlaceComment> findByIdAndDeletedAtIsNull(Long id);
 
+    Optional<PlaceComment> findByIdAndPlace_IdAndDeletedAtIsNull(
+            Long id,
+            Long placeId
+    );
+
     List<PlaceComment> findByPlace_IdAndDeletedAtIsNullOrderByIdDesc(
             Long placeId,
             Pageable pageable
