@@ -1,6 +1,6 @@
 package com.piumteo.server.global.exception;
 
-import com.piumteo.server.domain.comment.exception.CommentErrorCode;
+import com.piumteo.server.domain.comment.exception.CommentCode;
 import com.piumteo.server.domain.place.exception.PlaceErrorCode;
 import com.piumteo.server.domain.reaction.exception.ReactionErrorCode;
 import com.piumteo.server.domain.user.exception.UserErrorCode;
@@ -29,11 +29,11 @@ public interface ErrorCode {
     @Deprecated ErrorCode INVALID_BOUNDS = PlaceErrorCode.INVALID_BOUNDS;
     @Deprecated ErrorCode PLACE_ALREADY_DELETED = PlaceErrorCode.PLACE_ALREADY_DELETED;
 
-    @Deprecated ErrorCode COMMENT_NOT_FOUND = CommentErrorCode.COMMENT_NOT_FOUND;
-    @Deprecated ErrorCode COMMENT_ALREADY_DELETED = CommentErrorCode.COMMENT_ALREADY_DELETED;
-    @Deprecated ErrorCode INVALID_GUEST_PASSWORD = CommentErrorCode.INVALID_GUEST_PASSWORD;
-    @Deprecated ErrorCode UNAUTHORIZED_COMMENT_DELETE = CommentErrorCode.UNAUTHORIZED_COMMENT_DELETE;
-    @Deprecated ErrorCode INVALID_COMMENT_AUTHOR_TYPE = CommentErrorCode.INVALID_COMMENT_AUTHOR_TYPE;
+    @Deprecated ErrorCode COMMENT_NOT_FOUND = CommentCode.COMMENT_NOT_FOUND;
+    @Deprecated ErrorCode COMMENT_ALREADY_DELETED = CommentCode.COMMENT_ALREADY_DELETED;
+    @Deprecated ErrorCode INVALID_GUEST_PASSWORD = CommentCode.INVALID_GUEST_PASSWORD;
+    @Deprecated ErrorCode UNAUTHORIZED_COMMENT_DELETE = CommentCode.UNAUTHORIZED_COMMENT_DELETE;
+    @Deprecated ErrorCode INVALID_COMMENT_AUTHOR_TYPE = CommentCode.INVALID_COMMENT_AUTHOR_TYPE;
 
     @Deprecated ErrorCode INVALID_REACTION_TYPE = ReactionErrorCode.INVALID_REACTION_TYPE;
     @Deprecated ErrorCode REACTION_TOO_FAST = ReactionErrorCode.REACTION_TOO_FAST;

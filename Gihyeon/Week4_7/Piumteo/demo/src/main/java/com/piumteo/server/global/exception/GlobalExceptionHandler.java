@@ -12,8 +12,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import java.util.List;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @Slf4j
 @Order(Ordered.LOWEST_PRECEDENCE)
@@ -35,70 +35,81 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(
             MethodArgumentNotValidException exception
     ) {
-        List<ErrorResponse.FieldError> fieldErrors = exception.getBindingResult()
-                .getFieldErrors()
-                .stream()
-                .map(error -> ErrorResponse.FieldError.of(
-                        error.getField(),
-                        error.getDefaultMessage(),
-                        error.getRejectedValue()
-                ))
-                .toList();
+        log.warn("Request body validation failed: {}", exception.getMessage());
 
         ErrorCode errorCode = CommonErrorCode.INVALID_INPUT_VALUE;
 
         return ResponseEntity
                 .status(errorCode.getHttpStatus())
-                .body(ErrorResponse.of(errorCode, fieldErrors));
+                .body(ErrorResponse.of(errorCode));
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ErrorResponse> handleConstraintViolationException(
             ConstraintViolationException exception
     ) {
-        List<ErrorResponse.FieldError> fieldErrors = exception.getConstraintViolations()
-                .stream()
-                .map(violation -> ErrorResponse.FieldError.of(
-                        violation.getPropertyPath().toString(),
-                        violation.getMessage(),
-                        violation.getInvalidValue()
-                ))
-                .toList();
+        log.warn("Request parameter/path validation failed: {}", exception.getMessage());
 
         ErrorCode errorCode = CommonErrorCode.INVALID_INPUT_VALUE;
 
         return ResponseEntity
                 .status(errorCode.getHttpStatus())
-                .body(ErrorResponse.of(errorCode, fieldErrors));
+                .body(ErrorResponse.of(errorCode));
+    }
+
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ErrorResponse> handleHandlerMethodValidationException(
+            HandlerMethodValidationException exception
+    ) {
+
+        ErrorCode errorCode = CommonErrorCode.INVALID_INPUT_VALUE;
+
+        return ResponseEntity
+                .status(errorCode.getHttpStatus())
+                .body(ErrorResponse.of(errorCode));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(
+            MethodArgumentTypeMismatchException exception
+    ) {
+
+        ErrorCode errorCode = CommonErrorCode.INVALID_INPUT_VALUE;
+
+        return ResponseEntity
+                .status(errorCode.getHttpStatus())
+                .body(ErrorResponse.of(errorCode));
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ErrorResponse> handleMissingServletRequestParameterException(
             MissingServletRequestParameterException exception
     ) {
+
         ErrorCode errorCode = CommonErrorCode.INVALID_REQUEST;
-        String message = "필수 요청 파라미터가 누락되었습니다: " + exception.getParameterName();
 
         return ResponseEntity
                 .status(errorCode.getHttpStatus())
-                .body(ErrorResponse.of(errorCode, message));
+                .body(ErrorResponse.of(errorCode));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(
             HttpMessageNotReadableException exception
     ) {
+
         ErrorCode errorCode = CommonErrorCode.INVALID_REQUEST;
 
         return ResponseEntity
                 .status(errorCode.getHttpStatus())
-                .body(ErrorResponse.of(errorCode, "요청 본문이 올바르지 않습니다."));
+                .body(ErrorResponse.of(errorCode));
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleHttpRequestMethodNotSupportedException(
             HttpRequestMethodNotSupportedException exception
     ) {
+
         ErrorCode errorCode = CommonErrorCode.METHOD_NOT_ALLOWED;
 
         return ResponseEntity
@@ -110,7 +121,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleException(
             Exception exception
     ) {
-        log.error("Unexpected server error", exception);
 
         ErrorCode errorCode = CommonErrorCode.INTERNAL_SERVER_ERROR;
 
