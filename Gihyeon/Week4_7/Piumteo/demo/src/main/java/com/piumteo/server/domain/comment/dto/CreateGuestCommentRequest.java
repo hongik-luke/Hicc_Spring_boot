@@ -10,7 +10,7 @@ public record CreateGuestCommentRequest(
         String displayNickname,
 
         @NotBlank(message = "게스트 비밀번호는 필수입니다.")
-        @Size(min = 4, max = 30, message = "게스트 비밀번호는 4자 이상 30자 이하여야 합니다.")
+        @Size(min = 4, max = 50, message = "게스트 비밀번호는 4자 이상 50자 이하여야 합니다.")
         String guestPassword,
 
         @NotBlank(message = "댓글 내용은 필수입니다.")
