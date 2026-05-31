@@ -1,0 +1,59 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.4.5'  // ✅ 안정 버전으로 변경
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'kr'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	 // ===== Spring Boot =====
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    // ===== Database (MariaDB) =====
+    runtimeOnly 'org.mariadb.jdbc:mariadb-java-client:3.3.3'
+
+    // ===== Querydsl (Spring Boot 3 = jakarta) =====
+    implementation 'com.querydsl:querydsl-jpa:5.1.0:jakarta'
+    annotationProcessor 'com.querydsl:querydsl-apt:5.1.0:jakarta'
+    annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
+    annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
+
+    // ===== Lombok =====
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // ===== Test =====
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+   implementation 'org.springframework.boot:spring-boot-starter-validation'
+   
+// 변경
+implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.8'
+    //  임시 테스트 및 인메모리 가짜 DB 작동을 위한 H2 라이브러리
+    runtimeOnly 'com.h2database:h2'
+
+    // Security
+implementation 'org.springframework.boot:spring-boot-starter-security'
+testImplementation 'org.springframework.security:spring-security-test'
+
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+
+
